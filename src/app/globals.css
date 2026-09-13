@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens - continues the visual language already established for
+ * BuyBack's Purchase Engine internal tooling (the status dashboard built
+ * alongside the backend): IBM Plex Sans for UI, IBM Plex Mono for anything
+ * numeric (scores, quantities, SKUs, money), a deep teal accent. Chosen for
+ * brand continuity across this project's own tools, not novelty.
+ *
+ * Semantic colors (buy/consider/skip/risk) are deliberately a *different*
+ * hue family from the accent - they encode the engine's own vocabulary
+ * (BUY / CONSIDER / SKIP tiers, risk flags), not brand decoration, so they
+ * need to read as a distinct signal even where the accent also appears.
+ *
+ * Token-per-theme structure follows the same three-state contract as every
+ * other surface in this project: bare :root is the light palette, the
+ * prefers-color-scheme block covers system dark mode. No manual
+ * light/dark toggle yet - this is a small internal tool with one realistic
+ * viewing context (a work laptop) - see docs/adr/0003.
+ */
+
+:root {
+  --color-ink: #14191a;
+  --color-paper: #f4f6f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #eaf0ee;
+  --color-border: #dbe3e0;
+  --color-muted: #5b655f;
+
+  --color-accent: #146b64;
+  --color-accent-ink: #0d4642;
+  --color-accent-soft: #e1f0ed;
+
+  --color-buy: #1f7a4d;
+  --color-buy-soft: #e3f3e9;
+  --color-consider: #a86c14;
+  --color-consider-soft: #faf1de;
+  --color-skip: #545f68;
+  --color-skip-soft: #eef1f3;
+  --color-risk: #ad3f28;
+  --color-risk-soft: #fbe9e3;
+
+  --shadow-card: 0 1px 2px rgba(20, 30, 28, 0.06), 0 6px 20px -12px rgba(20, 30, 28, 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink: #eaf1ee;
+    --color-paper: #101413;
+    --color-surface: #161c1a;
+    --color-surface-2: #1c2321;
+    --color-border: #2a332f;
+    --color-muted: #9caaa3;
+
+    --color-accent: #54d6c6;
+    --color-accent-ink: #8fe7db;
+    --color-accent-soft: rgba(84, 214, 198, 0.12);
+
+    --color-buy: #7ad39a;
+    --color-buy-soft: rgba(122, 211, 154, 0.12);
+    --color-consider: #e6b45c;
+    --color-consider-soft: rgba(230, 180, 92, 0.12);
+    --color-skip: #b7c2c9;
+    --color-skip-soft: rgba(183, 194, 201, 0.08);
+    --color-risk: #ec8266;
+    --color-risk-soft: rgba(236, 130, 102, 0.12);
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-paper: var(--color-paper);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-border: var(--color-border);
+  --color-muted: var(--color-muted);
+
+  --color-accent: var(--color-accent);
+  --color-accent-ink: var(--color-accent-ink);
+  --color-accent-soft: var(--color-accent-soft);
+
+  --color-buy: var(--color-buy);
+  --color-buy-soft: var(--color-buy-soft);
+  --color-consider: var(--color-consider);
+  --color-consider-soft: var(--color-consider-soft);
+  --color-skip: var(--color-skip);
+  --color-skip-soft: var(--color-skip-soft);
+  --color-risk: var(--color-risk);
+  --color-risk-soft: var(--color-risk-soft);
+
+  --shadow-card: var(--shadow-card);
+
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
+}
+
+/* tabular numerals wherever digits line up in a column - scores, quantities,
+   money. Applied per-component via the .font-mono utility, this is just the
+   baseline so stray numeric text elsewhere doesn't visually jitter. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
