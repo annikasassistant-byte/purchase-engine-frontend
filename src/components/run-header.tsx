@@ -19,6 +19,12 @@ export function RunHeader({ run }: { run: RunSummary }) {
           {run.counts.scored} scored · {run.counts.buy} buy ({run.counts.buy_funded} funded) ·{" "}
           {run.counts.consider} consider · {run.counts.skip} skip
         </span>
+        {/* Not backend-sourced - manually confirmed against the raw JTL
+            inventory export's own filename date. The engine's freshness
+            output (sales_through / purchases_through / workbook_updated)
+            doesn't cover inventory at all, so there's nothing to read this
+            from yet; noted here as a plain fact instead. */}
+        <span>Inventory last updated 7 Aug 2026</span>
       </div>
       {run.stale && (
         <div className="flex items-start gap-2 rounded-lg border border-consider/30 bg-consider-soft px-3 py-2 text-sm text-consider">
