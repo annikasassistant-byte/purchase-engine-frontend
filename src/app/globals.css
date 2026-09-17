@@ -101,6 +101,50 @@
   --font-mono: var(--font-plex-mono);
 }
 
+/* Skeleton loading state (switching to Consider/Skip lazy-fetches from the
+   real backend and can take a couple of seconds - see tests/e2e/README.md).
+   A gradient sweep reads as "actively loading" more clearly than a flat
+   pulsing block for list-shaped content - current UX guidance favors it
+   over plain opacity-pulse here.
+
+   The prefers-reduced-motion override lives in this same unlayered rule
+   rather than as a `motion-reduce:` Tailwind utility on the element: this
+   class sets `animation` directly in a plain (unlayered) CSS rule, and
+   Tailwind wraps its own utilities in `@layer utilities` - per the CSS
+   cascade-layers spec, an unlayered declaration always beats a layered one
+   at equal specificity regardless of source order, so a `motion-reduce:*`
+   utility here would silently never win. Same underlying gotcha as the
+   `outline-none` fix in recommendation-row.tsx, different symptom. */
+.skeleton-shimmer {
+  background-color: var(--color-surface-2);
+  background-image: linear-gradient(
+    100deg,
+    transparent 35%,
+    var(--color-border) 50%,
+    transparent 65%
+  );
+  background-size: 200% 100%;
+  background-position-x: 180%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  /* Inherited from an ancestor's inline --skeleton-delay (animation-delay
+     itself doesn't inherit, custom properties do) so a group of skeleton
+     rows can stagger without each one needing the delay set directly. */
+  animation-delay: var(--skeleton-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background-position-x: 50%;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position-x: -20%;
+  }
+}
+
 body {
   background: var(--color-paper);
   color: var(--color-ink);

@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 
 import { BudgetControl } from "@/components/budget-control";
 import { RecommendationRow } from "@/components/recommendation-row";
+import { RecommendationRowSkeleton } from "@/components/recommendation-row-skeleton";
 import { RunTriggerButton } from "@/components/run-trigger-button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { allocateBudgetAction, loadRecommendationsTabAction } from "@/lib/actions";
 import type { AllocationLine, Recommendation, RecommendationLabel, RunCounts } from "@/lib/schemas";
 
@@ -173,10 +173,18 @@ export function RecommendationList({
         className="flex flex-col gap-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         {tabLoading && (
-          <div className="flex flex-col gap-3" aria-live="polite" aria-busy="true">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
+          <div
+            role="status"
+            className="flex flex-col gap-3"
+            aria-live="polite"
+            aria-busy="true"
+            aria-label={`Loading ${activeTab.toLowerCase()} recommendations`}
+          >
+            {[0, 120, 240, 360].map((delayMs) => (
+              <div key={delayMs} style={{ "--skeleton-delay": `${delayMs}ms` } as CSSProperties}>
+                <RecommendationRowSkeleton />
+              </div>
+            ))}
           </div>
         )}
 

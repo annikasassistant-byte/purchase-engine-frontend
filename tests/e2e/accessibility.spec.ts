@@ -88,3 +88,38 @@ test("tier tabs support ARIA APG keyboard navigation (arrow keys move focus, Ent
   await page.keyboard.press("Enter");
   await expect(skipTab).toHaveAttribute("aria-selected", "true", { timeout: 10_000 });
 });
+
+// See docs/adr/0004 - the loading skeleton shown while a tier tab lazy-fetches
+// caught two real bugs: an aria-prohibited-attr violation (aria-label on a
+// bare <div>, whose implicit role "generic" doesn't permit it) and a
+// prefers-reduced-motion override that a layered `motion-reduce:` Tailwind
+// utility could never win against an unlayered CSS animation rule.
+test("tab-switch loading state announces correctly and respects reduced motion", async ({
+  page,
+}) => {
+  await page.goto("/", { waitUntil: "networkidle" });
+
+  await page.getByRole("tab", { name: /Consider/ }).click();
+
+  const status = page.getByRole("status");
+  await expect(status).toBeVisible();
+  await expect(status).toHaveAttribute("aria-busy", "true");
+});
+
+test("skeleton shimmer is disabled under prefers-reduced-motion", async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await page.goto("/", { waitUntil: "networkidle" });
+  await page.locator("details").first().waitFor({ state: "visible" });
+
+  await page.getByRole("tab", { name: /Skip/ }).click();
+  await page.waitForTimeout(150);
+
+  const animationName = await page.evaluate(() => {
+    const el = document.querySelector(".skeleton-shimmer");
+    return el ? getComputedStyle(el).animationName : null;
+  });
+  expect(animationName).toBe("none");
+
+  await context.close();
+});

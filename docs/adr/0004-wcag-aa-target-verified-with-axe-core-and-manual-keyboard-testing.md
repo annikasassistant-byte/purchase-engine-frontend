@@ -63,6 +63,37 @@ ADR names an explicit target or how it gets checked.
   pattern. That gap has to be closed by deliberately testing against the
   ARIA APG for every composite widget added, not by trusting a clean axe-core
   run to mean "done."
+- **A second, related Tailwind v4 cascade-layer gotcha** (2026-09-17, the
+  tab-switch loading skeleton in `RecommendationRowSkeleton`): its shimmer
+  animation is a plain, unlayered CSS rule (`.skeleton-shimmer` in
+  `globals.css`) because it needs a multi-stop gradient background that's
+  awkward to express as Tailwind utility classes. Tailwind wraps all of its
+  own utilities in `@layer utilities`. Per the CSS cascade-layers spec, an
+  *unlayered* declaration always wins over a *layered* one at equal
+  specificity, regardless of source order - so a `motion-reduce:animate-none`
+  utility placed on the same element could never actually turn the
+  animation off, even though it looked correct in the DOM and even matched
+  in axe-core's static check. Confirmed live with a `reducedMotion: "reduce"`
+  Playwright context - computed `animation-name` stayed `shimmer`. Fixed by
+  putting the `@media (prefers-reduced-motion: reduce)` override *inside the
+  same unlayered rule* instead of relying on a layered Tailwind variant to
+  beat it. Rule of thumb this ADR now documents: once a style is written as
+  a plain unlayered CSS rule (gradients, keyframes, anything not expressible
+  as a utility class), every state that rule needs - hover, dark mode,
+  reduced-motion, whatever - has to be handled inside that same rule too;
+  a Tailwind variant utility bolted on next to it will not reliably override
+  it.
+- **`aria-prohibited-attr` from the same skeleton work:** the loading
+  container was a plain `<div>` with `aria-label` set directly. A `<div>`'s
+  implicit ARIA role is `generic`, and `generic` prohibits name-from-content
+  attributes like `aria-label` - axe-core caught this immediately (a real
+  `serious`-impact violation, not a style nit). Fixed by adding
+  `role="status"` (an appropriate live-region role for a loading
+  announcement anyway), which does permit `aria-label`. General lesson:
+  `aria-live`/`aria-busy`/`aria-label` on a bare `<div>` needs an explicit
+  role before assuming the label actually reaches assistive tech - axe-core
+  checks this for free, so run it on every new interactive/live-region
+  element rather than assuming ARIA attributes “just work” on any container.
 - This ADR doesn't re-list every contrast value or scan result - that
   detail lives in `globals.css`'s inline comments and the git history for
   `tests/e2e/accessibility.spec.ts`, not here.
