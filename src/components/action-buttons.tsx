@@ -86,10 +86,25 @@ export function ActionButtons({
     );
   }
 
+  // A budget-trimmed line can legitimately carry qty=0 (purchase_engine's
+  // BudgetAllocator: "a low-confidence line keeps its budget and stays
+  // visible" - the row and its reasons stay, only the funded quantity hits
+  // zero). Logging "BUY, qty 0" isn't a real decision though - it's not
+  // buyable today, and it would pollute the Phase-4 backtest dataset with a
+  // zero-quantity purchase. Disable the one-click Buy in that case; Adjust
+  // qty (override the budget) and Skip stay fully available either way.
+  const canBuyAsSuggested = suggestedQty > 0;
+
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="buy" disabled={pending} onClick={() => submit("BUY", suggestedQty)}>
+        <Button
+          size="sm"
+          variant="buy"
+          disabled={pending || !canBuyAsSuggested}
+          title={canBuyAsSuggested ? undefined : "Not funded in today's budget - adjust the qty to buy it anyway"}
+          onClick={() => submit("BUY", suggestedQty)}
+        >
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : `Buy ${suggestedQty}`}
         </Button>
         <Button size="sm" variant="secondary" disabled={pending} onClick={() => setAdjusting(true)}>

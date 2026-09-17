@@ -33,7 +33,12 @@
 
   --color-buy: #1f7a4d;
   --color-buy-soft: #e3f3e9;
-  --color-consider: #a86c14;
+  /* #a86c14 (the original pick) read fine but only hit 3.88:1 / 4.36:1
+     against consider-soft/surface - short of WCAG AA's 4.5:1 for normal
+     text (axe-core caught this in 30 places: the STALE banner, the
+     CONSIDER badge, every budget-trimmed row's inline warning). Darkened
+     to clear both backgrounds with real margin (5.3:1 / 5.9:1). */
+  --color-consider: #8a5a10;
   --color-consider-soft: #faf1de;
   --color-skip: #545f68;
   --color-skip-soft: #eef1f3;

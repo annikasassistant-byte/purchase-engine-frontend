@@ -52,7 +52,9 @@ export function RecommendationRow({
 
   return (
     <details className="group rounded-xl border border-border bg-surface shadow-[var(--shadow-card)] open:shadow-none">
-      <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <summary
+        className="flex cursor-pointer list-none flex-col gap-3 rounded-xl p-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent sm:flex-row sm:items-center sm:justify-between"
+      >
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <ChevronDown
             className="mt-1 size-4 shrink-0 text-muted transition-transform group-open:rotate-180"
