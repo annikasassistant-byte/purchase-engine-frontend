@@ -53,6 +53,16 @@ Two more small consequences fall out of this cleanly:
   covers it as of writing, but this is exactly the kind of assumption worth
   re-checking against Vercel's current docs before a real deploy, not
   trusting this comment indefinitely.
+  - **Verified 2026-09-17, against the real deploy
+    (`purchase-engine-frontend.vercel.app`, Hobby plan).** Vercel's current
+    docs (`/docs/functions/configuring-functions/duration`, last updated
+    2026-08-24) give Hobby + Fluid Compute - on by default for new
+    projects - a 300s default *and* maximum, well above the 150s this app
+    asks for. Confirmed live, not just from docs: clicking "Run engine" on
+    the deployed site completed successfully in the expected ~60-99s range
+    with no timeout. Also confirmed live: triggering a second run while the
+    first was still in flight was correctly rejected by the backend
+    ("a run is already in progress..."), not a Vercel-side failure.
 - Every mutation-shaped action (`triggerRunAction`, `allocateBudgetAction`,
   `submitBuyerActionAction`) validates its input with `zod` before it
   reaches `backend-client.ts` - a Server Action is a public POST endpoint

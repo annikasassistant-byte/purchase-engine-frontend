@@ -46,3 +46,45 @@ test("Buy button is disabled for a SKIP-tier row (qty is always 0)", async ({ pa
   const buyButton = firstRow.getByRole("button", { name: /^Buy \d+$/ });
   await expect(buyButton).toBeDisabled();
 });
+
+// See docs/adr/0004 - the tier tabs follow the WAI-ARIA APG tabs pattern
+// with manual activation: arrow keys move focus between tabs without
+// selecting them (selecting fires a real fetch), Enter/Space selects.
+test("tier tabs support ARIA APG keyboard navigation (arrow keys move focus, Enter selects)", async ({
+  page,
+}) => {
+  await page.goto("/", { waitUntil: "networkidle" });
+
+  const buyTab = page.getByRole("tab", { name: /Buy/ });
+  const considerTab = page.getByRole("tab", { name: /Consider/ });
+  const skipTab = page.getByRole("tab", { name: /Skip/ });
+
+  await expect(buyTab).toHaveAttribute("aria-selected", "true");
+  await expect(buyTab).toHaveAttribute("tabindex", "0");
+  await expect(considerTab).toHaveAttribute("tabindex", "-1");
+
+  // aria-controls / aria-labelledby wire each tab to a real tabpanel.
+  const panelId = await buyTab.getAttribute("aria-controls");
+  const panel = page.locator(`#${panelId}`);
+  await expect(panel).toHaveAttribute("role", "tabpanel");
+  await expect(panel).toHaveAttribute("aria-labelledby", (await buyTab.getAttribute("id")) ?? "");
+
+  await buyTab.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(considerTab).toBeFocused();
+  // Moving focus must not select - a stray arrow press shouldn't fire a fetch.
+  await expect(buyTab).toHaveAttribute("aria-selected", "true");
+
+  await page.keyboard.press("End");
+  await expect(skipTab).toBeFocused();
+
+  await page.keyboard.press("Home");
+  await expect(buyTab).toBeFocused();
+
+  await page.keyboard.press("ArrowLeft");
+  await expect(skipTab).toBeFocused(); // wraps around
+  await expect(buyTab).toHaveAttribute("aria-selected", "true"); // still not selected
+
+  await page.keyboard.press("Enter");
+  await expect(skipTab).toHaveAttribute("aria-selected", "true", { timeout: 10_000 });
+});

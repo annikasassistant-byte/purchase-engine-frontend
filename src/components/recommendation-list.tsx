@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 
 import { BudgetControl } from "@/components/budget-control";
 import { RecommendationRow } from "@/components/recommendation-row";
@@ -45,6 +46,7 @@ export function RecommendationList({
   });
   const [tabLoading, setTabLoading] = useState(false);
   const [tabError, setTabError] = useState<string | null>(null);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const [budget, setBudget] = useState(initialBudget);
   const [allocation, setAllocation] = useState<Record<string, AllocationLine> | null>(null);
@@ -77,6 +79,25 @@ export function RecommendationList({
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
+
+  // Roving tabindex + arrow-key movement per the WAI-ARIA APG tabs pattern
+  // (https://www.w3.org/WAI/ARIA/apg/patterns/tabs/) - manual activation, not
+  // automatic: arrow keys only move focus between tabs, since actually
+  // selecting one triggers a real network fetch (see selectTab) that
+  // shouldn't fire on every arrow press while a user is just browsing tabs.
+  function handleTablistKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const currentIndex = TABS.findIndex((tab) => tab.label === activeTab);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % TABS.length;
+    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = TABS.length - 1;
+
+    if (nextIndex !== null) {
+      event.preventDefault();
+      tabRefs.current[nextIndex]?.focus();
+    }
+  }
 
   async function selectTab(label: RecommendationLabel) {
     setActiveTab(label);
@@ -111,12 +132,23 @@ export function RecommendationList({
         <RunTriggerButton budget={budget} />
       </div>
 
-      <div role="tablist" aria-label="Recommendation tier" className="flex gap-1 border-b border-border">
-        {TABS.map((tab) => (
+      <div
+        role="tablist"
+        aria-label="Recommendation tier"
+        className="flex gap-1 border-b border-border"
+        onKeyDown={handleTablistKeyDown}
+      >
+        {TABS.map((tab, index) => (
           <button
             key={tab.label}
+            ref={(el) => {
+              tabRefs.current[index] = el;
+            }}
+            id={`tab-${tab.label}`}
             role="tab"
             aria-selected={activeTab === tab.label}
+            aria-controls={`panel-${tab.label}`}
+            tabIndex={activeTab === tab.label ? 0 : -1}
             onClick={() => void selectTab(tab.label)}
             className={
               "flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors " +
@@ -133,38 +165,46 @@ export function RecommendationList({
         ))}
       </div>
 
-      {tabLoading && (
-        <div className="flex flex-col gap-3" aria-live="polite" aria-busy="true">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      )}
+      <div
+        role="tabpanel"
+        id={`panel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+        tabIndex={0}
+        className="flex flex-col gap-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        {tabLoading && (
+          <div className="flex flex-col gap-3" aria-live="polite" aria-busy="true">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        )}
 
-      {tabError && <p className="text-sm text-risk">{tabError}</p>}
+        {tabError && <p className="text-sm text-risk">{tabError}</p>}
 
-      {!tabLoading && activeList && activeList.length === 0 && (
-        <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted">
-          Nothing in this tier for the current run.
-        </p>
-      )}
+        {!tabLoading && activeList && activeList.length === 0 && (
+          <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted">
+            Nothing in this tier for the current run.
+          </p>
+        )}
 
-      {!tabLoading && activeList && activeList.length > 0 && (
-        <div className="flex flex-col gap-3">
-          {activeList.map((rec) => {
-            const live = activeTab === "BUY" ? allocation?.[rec.produkt_id] : undefined;
-            return (
-              <RecommendationRow
-                key={rec.produkt_id}
-                rec={rec}
-                qty={live ? live.final_qty : rec.recommended_qty}
-                trimmed={live ? live.trimmed : rec.budget_trimmed}
-                gpPerEur={live ? live.gp_per_eur : rec.est_gross_profit_per_eur}
-              />
-            );
-          })}
-        </div>
-      )}
+        {!tabLoading && activeList && activeList.length > 0 && (
+          <div className="flex flex-col gap-3">
+            {activeList.map((rec) => {
+              const live = activeTab === "BUY" ? allocation?.[rec.produkt_id] : undefined;
+              return (
+                <RecommendationRow
+                  key={rec.produkt_id}
+                  rec={rec}
+                  qty={live ? live.final_qty : rec.recommended_qty}
+                  trimmed={live ? live.trimmed : rec.budget_trimmed}
+                  gpPerEur={live ? live.gp_per_eur : rec.est_gross_profit_per_eur}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
