@@ -25,3 +25,20 @@ at) - no mocking, same philosophy as `purchase_engine`'s own
   `playwright.config.ts` sets a 45s per-test timeout for exactly this
   reason - if the backend was already asleep, the very first test may still
   need a retry.
+
+## CI
+
+`.github/workflows/ci.yml` runs `typecheck` + `lint` + `build` on every push
+and PR, but this suite specifically only on a **push to `main`** - not every
+branch push, on purpose. Given the two points above (a real row written per
+run, and a shared free-tier backend this project is already careful not to
+self-load-test), running it on every single push would mean several stray
+`SKIP` rows a day during active development, plus concurrent CI runs putting
+real load on that one shared instance. Gating it to `main` keeps that down
+to "once per merge" while still catching real integration breakage.
+
+Needs `PURCHASE_ENGINE_API_URL` and `PURCHASE_ENGINE_API_KEY` as GitHub
+Actions repo secrets (Settings → Secrets and variables → Actions) - `next
+build` itself needs them too (`src/lib/env.ts` reads both at module load),
+so the `checks` job fails the same way locally-without-`.env.local` does if
+they're missing.

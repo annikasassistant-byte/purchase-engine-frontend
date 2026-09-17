@@ -27,7 +27,8 @@ immediately.
 ```bash
 npm run build && npm run start     # production build, locally
 npm run lint                       # ESLint (flat config, next/core-web-vitals + TS)
-npx tsc --noEmit                   # type-check only
+npm run typecheck                  # tsc --noEmit
+npm run test:e2e                   # Playwright - hits the real backend, see tests/e2e/README.md
 ```
 
 ---
@@ -129,13 +130,23 @@ app shape). Two things to get right:
   `PURCHASE_ENGINE_API_KEY` in the Vercel project's Environment Variables —
   neither is prefixed `NEXT_PUBLIC_`, so neither is exposed to the browser.
 - **Function duration**: `app/page.tsx` exports `maxDuration = 150` because
-  triggering a real engine run can take up to ~99s. Confirm the Vercel
-  plan/Fluid Compute setting in use actually allows that before relying on
-  it in production — see [ADR 0001](docs/adr/0001-server-side-proxy-for-the-backend-api.md).
+  triggering a real engine run can take up to ~99s. Verified live against
+  the deployed Vercel Hobby project on 2026-09-17 (current Vercel docs: Hobby
+  + Fluid Compute defaults to a 300s ceiling; a real "Run engine" click
+  completed in the expected range with no timeout) — see
+  [ADR 0001](docs/adr/0001-server-side-proxy-for-the-backend-api.md).
 
 Once deployed, update the backend's `CORS_ORIGINS` if anything ever calls it
 directly from a browser — this app itself doesn't need to be on that list,
 since it only ever talks to the backend server-side (see ADR 0001).
+
+## Continuous integration
+
+`.github/workflows/ci.yml`: typecheck + lint + build on every push and PR;
+the real-backend e2e suite additionally on every push to `main` (not every
+branch — see `tests/e2e/README.md` for why). Needs
+`PURCHASE_ENGINE_API_URL`/`PURCHASE_ENGINE_API_KEY` set as GitHub Actions
+repo secrets, the same two values as `.env.local`.
 
 ---
 
@@ -148,10 +159,12 @@ since it only ever talks to the backend server-side (see ADR 0001).
   not wired up here yet.
 - **No manual light/dark toggle** — follows the OS theme only. See
   [ADR 0003](docs/adr/0003-design-system-and-no-theme-toggle-yet.md).
-- **No automated tests yet.** `tsc --noEmit` and ESLint are the current
-  correctness net. Component/e2e tests (Vitest + Testing Library, or
-  Playwright for the budget-reallocation flow) are the natural next step,
-  not done here for scope reasons.
+- **No component-level unit tests (Vitest + Testing Library) yet** — only
+  end-to-end (`tests/e2e/`, Playwright, against the real backend) plus
+  `tsc --noEmit` and ESLint, all wired into CI (`.github/workflows/ci.yml`).
+  Fine for this app's size (mostly server-fetched data rendered by fairly
+  thin components); worth adding once a component's internal logic outgrows
+  what an e2e test can economically cover.
 - **`schemas.ts` is manually kept in sync** with the backend's Pydantic
   models — no generated client yet. See
   [ADR 0002](docs/adr/0002-zod-at-the-api-boundary.md) for when that's worth

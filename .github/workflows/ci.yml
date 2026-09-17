@@ -1,0 +1,79 @@
+name: CI
+
+# Two tiers on purpose, not one job that does everything:
+#
+# `checks` runs on every push/PR - typecheck, lint, and a production build.
+# All static/local, no side effects, done in well under a minute.
+#
+# `e2e` only runs on a push to main. tests/e2e/README.md is explicit that
+# this suite hits the *real* deployed backend, not a mock: one test writes a
+# permanent SKIP row to production on every run, and the backend is a single
+# shared Render free-tier instance the project is already careful not to
+# self-load-test. Running that on every push to every branch would mean
+# several stray rows a day during active development, plus concurrent runs
+# hammering a shared instance. Gating it to main keeps the noise down to
+# "once per merge" while still catching real integration breakage before it
+# reaches users.
+#
+# Both jobs need PURCHASE_ENGINE_API_URL/PURCHASE_ENGINE_API_KEY as repo
+# secrets - `next build` itself imports src/lib/env.ts (server-only, reads
+# both at module load) for the app's one route, so even the build step in
+# `checks` fails without them, confirmed locally by building with
+# .env.local removed. See docs/adr/0001 for why these are never
+# NEXT_PUBLIC_ and never reach the browser.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PURCHASE_ENGINE_API_URL: ${{ secrets.PURCHASE_ENGINE_API_URL }}
+  PURCHASE_ENGINE_API_KEY: ${{ secrets.PURCHASE_ENGINE_API_KEY }}
+
+jobs:
+  checks:
+    name: Typecheck, lint, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+
+  e2e:
+    name: End-to-end tests (real backend)
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results/
+          retention-days: 7
